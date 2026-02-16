@@ -3,9 +3,13 @@ import os
 from flask import Flask, render_template, jsonify, request
 import logging
 
-# Configure Flask logging to suppress standard output
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
+from src.core.logger import get_logger
+
+log = get_logger()
+
+# Suppress Flask/Werkzeug default logging
+werkzeug_log = logging.getLogger('werkzeug')
+werkzeug_log.setLevel(logging.ERROR)
 
 # Resolve paths relative to this file (works on both Mac and Pi)
 _CORE_DIR = os.path.dirname(os.path.abspath(__file__))       # src/core
@@ -43,10 +47,10 @@ class WebController:
         self.server_thread.start()
 
         url = f"http://127.0.0.1:{self.port}" if emulator_display else f"http://0.0.0.0:{self.port}"
-        print(f"Web Controller started at {url}")
+        log.info(f"Web Controller started at {url}")
         if emulator_display:
-            print(f"  Emulator:  {url}/emulator")
-            print(f"  Remote:    {url}/")
+            log.info(f"  Emulator:  {url}/emulator")
+            log.info(f"  Remote:    {url}/")
 
     def _setup_emulator(self):
         """Add emulator routes and WebSocket support."""
@@ -59,7 +63,6 @@ class WebController:
     def _run_server(self):
         try:
             if self.socketio:
-                # Use SocketIO's run method for WebSocket support
                 self.socketio.run(self.app, host='0.0.0.0', port=self.port,
                                   debug=False, use_reloader=False, log_output=False,
                                   allow_unsafe_werkzeug=True)
@@ -67,9 +70,7 @@ class WebController:
                 self.app.run(host='0.0.0.0', port=self.port,
                              debug=False, use_reloader=False, load_dotenv=False)
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            print(f"Error starting Web Controller on port {self.port}: {e}")
+            log.critical(f"Web server failed on port {self.port}: {e}", exc_info=True)
 
     # --- Remote routes ---
 

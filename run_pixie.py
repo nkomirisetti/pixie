@@ -20,45 +20,62 @@ def main():
 
 
 def _run_app(args):
-    """Normal application startup."""
-    if args.emulator:
-        from src.adapters.web_matrix import WebMatrixAdapter
-        display = WebMatrixAdapter()
-    else:
-        from src.adapters.real_matrix import RealMatrixAdapter
-        display = RealMatrixAdapter()
+    """Normal application startup with top-level error handling."""
+    from src.core.logger import get_logger
+    log = get_logger()
 
-    # --- App Manager Setup ---
-    from src.core.app_manager import AppManager
-    from src.apps.clock_app import ClockApp
-    from src.apps.weather_app import WeatherApp
-
-    app_manager = AppManager(display)
-
-    clock = ClockApp(display)
-    weather = WeatherApp(display)
-
-    app_manager.register_app("clock", clock)
-    app_manager.register_app("weather", weather)
-
-    # --- Web Controller Setup (unified server) ---
-    from src.core.web_controller import WebController
-    controller_port = 5002 if args.emulator else 5000
-    emulator_display = display if args.emulator else None
-    controller = WebController(app_manager, port=controller_port, emulator_display=emulator_display)
-
-    # Set default app
-    if args.app and args.app in ["clock", "weather"]:
-        app_manager.switch_to(args.app)
-    else:
-        app_manager.switch_to("clock")
-
-    # Run loop
-    print("Starting Pixie OS...")
     try:
+        if args.emulator:
+            from src.adapters.web_matrix import WebMatrixAdapter
+            display = WebMatrixAdapter()
+        else:
+            from src.adapters.real_matrix import RealMatrixAdapter
+            display = RealMatrixAdapter()
+
+        # --- App Manager Setup ---
+        from src.core.app_manager import AppManager
+        from src.apps.clock_app import ClockApp
+        from src.apps.weather_app import WeatherApp
+
+        app_manager = AppManager(display)
+
+        clock = ClockApp(display)
+        weather = WeatherApp(display)
+
+        app_manager.register_app("clock", clock)
+        app_manager.register_app("weather", weather)
+
+        # --- Web Controller Setup (unified server) ---
+        from src.core.web_controller import WebController
+        controller_port = 5002 if args.emulator else 5000
+        emulator_display = display if args.emulator else None
+        controller = WebController(app_manager, port=controller_port, emulator_display=emulator_display)
+
+        # Set default app
+        if args.app and args.app in app_manager.apps:
+            app_manager.switch_to(args.app)
+        else:
+            app_manager.switch_to("clock")
+
+        # Run loop
+        log.info("Starting Pixie OS...")
         app_manager.run_loop(fps=30)
+
     except KeyboardInterrupt:
-        pass
+        log.info("Pixie shutdown by user.")
+    except Exception as e:
+        log.critical(f"Fatal startup error: {e}", exc_info=True)
+        # Try to show error on display if possible
+        try:
+            display.clear()
+            for x in range(64):
+                for y in range(64):
+                    if (x + y) % 4 == 0:
+                        display.set_pixel(x, y, 255, 0, 0)
+            display.update()
+        except Exception:
+            pass
+        sys.exit(1)
 
 
 def _run_with_reload(args):
