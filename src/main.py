@@ -11,6 +11,7 @@ from src.core.display_interface import DisplayInterface
 def main():
     parser = argparse.ArgumentParser(description='Pixie Display Controller')
     parser.add_argument('--emulator', action='store_true', help='Run in web emulator mode')
+    parser.add_argument('--app', type=str, help='Initial app to start (clock, weather)')
     args = parser.parse_args()
 
     display: DisplayInterface
@@ -22,32 +23,33 @@ def main():
         from src.adapters.real_matrix import RealMatrixAdapter
         display = RealMatrixAdapter()
 
-    # Simple animation loop
-    print("Starting animation loop...")
-    x = 0
-    y = 0
-    dx = 1
-    dy = 1
+    # --- App Manager Setup ---
+    from src.core.app_manager import AppManager
+    from src.apps.clock_app import ClockApp
+    from src.apps.weather_app import WeatherApp
     
+    app_manager = AppManager(display)
+    
+    # Register Apps
+    clock = ClockApp(display)
+    weather = WeatherApp(display)
+    
+    app_manager.register_app("clock", clock)
+    app_manager.register_app("weather", weather)
+    
+    # Set default app
+    if args.app and args.app in ["clock", "weather"]:
+        app_manager.switch_to(args.app)
+    else:
+        app_manager.switch_to("clock")
+    
+    # Run loop
+    print("Starting Pixie OS...")
     try:
-        while True:
-            display.clear()
-            
-            # Draw a moving white pixel
-            display.set_pixel(x, y, 255, 255, 255)
-            
-            # Simple bouncing logic
-            x += dx
-            y += dy
-            
-            if x <= 0 or x >= 63: dx *= -1
-            if y <= 0 or y >= 63: dy *= -1
-            
-            display.update()
-            time.sleep(0.05)
-            
+        app_manager.run_loop(fps=30)
     except KeyboardInterrupt:
-        print("\nExiting...")
+        pass
+
 
 if __name__ == "__main__":
     main()
