@@ -6,9 +6,9 @@ description: Run Pixie locally in emulator mode for development
 
 This workflow starts Pixie in emulator mode on the local Mac. No Pi required.
 
-## Ports
-- **5001**: Matrix emulator (visual pixel grid) — open in browser
-- **5002**: Pixie Remote (app switcher UI)
+Everything runs on a single port (5002):
+- **http://127.0.0.1:5002/** — Remote control UI (app switcher)
+- **http://127.0.0.1:5002/emulator** — Matrix pixel grid (WebSocket real-time)
 
 ## Steps
 
@@ -19,6 +19,12 @@ This workflow starts Pixie in emulator mode on the local Mac. No Pi required.
 cd /Users/nikhilkomirisetti/projects/Pixie && python3 run_pixie.py --emulator
 ```
 
-2. Open the emulator in the browser (navigate to http://127.0.0.1:5001)
+2. Open the emulator in the browser (navigate to http://127.0.0.1:5002/emulator)
 
-3. Open the remote in the browser (navigate to http://127.0.0.1:5002)
+3. Open the remote in the browser (navigate to http://127.0.0.1:5002/)
+
+### Dev Mode (auto-reload on file changes)
+
+```bash
+cd /Users/nikhilkomirisetti/projects/Pixie && python3 run_pixie.py --emulator --dev
+```

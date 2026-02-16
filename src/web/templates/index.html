@@ -22,7 +22,6 @@
             border: 2px solid #333;
             background-color: #000;
             image-rendering: pixelated;
-            /* Crucial for pixel art look */
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
@@ -35,6 +34,14 @@
             font-size: 0.8em;
             color: #888;
         }
+
+        .status.connected {
+            color: #4CAF50;
+        }
+
+        .status.disconnected {
+            color: #f44336;
+        }
     </style>
 </head>
 
@@ -43,28 +50,18 @@
     <canvas id="matrix" width="512" height="512"></canvas>
     <div class="status" id="status">Connecting...</div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <script>
         const canvas = document.getElementById('matrix');
         const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
         const matrixWidth = {{ width }};
         const matrixHeight = {{ height }};
         const pixelSize = canvas.width / matrixWidth;
-
-        function fetchMatrixData() {
-            fetch('/matrix_data')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('status').innerText = 'Connected - Updating';
-                    drawMatrix(data);
-                })
-                .catch(err => {
-                    console.error('Error fetching data:', err);
-                    document.getElementById('status').innerText = 'Disconnected';
-                });
-        }
+        let frameCount = 0;
+        let lastFpsTime = performance.now();
 
         function drawMatrix(data) {
-            // data is a list of lists (width x height) containing (r, g, b) tuples
             for (let x = 0; x < matrixWidth; x++) {
                 for (let y = 0; y < matrixHeight; y++) {
                     const [r, g, b] = data[x][y];
@@ -72,10 +69,60 @@
                     ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
                 }
             }
+            frameCount++;
         }
 
-        // Poll every 100ms (10 FPS)
-        setInterval(fetchMatrixData, 100);
+        function updateFps() {
+            const now = performance.now();
+            const elapsed = now - lastFpsTime;
+            if (elapsed >= 1000) {
+                const fps = Math.round(frameCount * 1000 / elapsed);
+                statusEl.innerText = `Connected — ${fps} FPS`;
+                frameCount = 0;
+                lastFpsTime = now;
+            }
+        }
+
+        // Try WebSocket first, fall back to polling
+        try {
+            const socket = io({ transports: ['websocket', 'polling'] });
+
+            socket.on('connect', () => {
+                statusEl.innerText = 'Connected (WebSocket)';
+                statusEl.className = 'status connected';
+            });
+
+            socket.on('frame', (data) => {
+                drawMatrix(data);
+                updateFps();
+            });
+
+            socket.on('disconnect', () => {
+                statusEl.innerText = 'Disconnected';
+                statusEl.className = 'status disconnected';
+            });
+        } catch (e) {
+            // Fallback to HTTP polling if Socket.IO fails
+            console.warn('WebSocket unavailable, falling back to polling');
+            statusEl.innerText = 'Connected (Polling)';
+            statusEl.className = 'status connected';
+
+            function fetchMatrixData() {
+                fetch('/matrix_data')
+                    .then(response => response.json())
+                    .then(data => {
+                        drawMatrix(data);
+                        updateFps();
+                    })
+                    .catch(err => {
+                        statusEl.innerText = 'Disconnected';
+                        statusEl.className = 'status disconnected';
+                    });
+            }
+            setInterval(fetchMatrixData, 33); // ~30 FPS
+        }
+
+        setInterval(updateFps, 1000);
     </script>
 </body>
 

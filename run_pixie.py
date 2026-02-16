@@ -3,19 +3,24 @@ import time
 import sys
 import os
 
-print("DEBUG: STARTING PIXIE ROOT MAIN V2")
-
-from src.core.display_interface import DisplayInterface
-from src.core.matrix_buffer import MatrixBuffer
 
 def main():
     parser = argparse.ArgumentParser(description='Pixie Display Controller')
     parser.add_argument('--emulator', action='store_true', help='Run in web emulator mode')
     parser.add_argument('--app', type=str, help='Initial app to start (clock, weather)')
+    parser.add_argument('--dev', action='store_true', help='Enable dev mode with auto-reload on file changes')
     args = parser.parse_args()
 
-    # display: DisplayInterface
+    # Dev mode: wrap in a file-watching restart loop
+    if args.dev:
+        _run_with_reload(args)
+        return
 
+    _run_app(args)
+
+
+def _run_app(args):
+    """Normal application startup."""
     if args.emulator:
         from src.adapters.web_matrix import WebMatrixAdapter
         display = WebMatrixAdapter()
@@ -27,34 +32,98 @@ def main():
     from src.core.app_manager import AppManager
     from src.apps.clock_app import ClockApp
     from src.apps.weather_app import WeatherApp
-    
+
     app_manager = AppManager(display)
-    
-    # Register Apps
+
     clock = ClockApp(display)
     weather = WeatherApp(display)
-    
+
     app_manager.register_app("clock", clock)
     app_manager.register_app("weather", weather)
-    
-    # --- Web Controller Setup ---
+
+    # --- Web Controller Setup (unified server) ---
     from src.core.web_controller import WebController
-    # Use port 5000 on Pi
     controller_port = 5002 if args.emulator else 5000
-    controller = WebController(app_manager, port=controller_port)
+    emulator_display = display if args.emulator else None
+    controller = WebController(app_manager, port=controller_port, emulator_display=emulator_display)
 
     # Set default app
     if args.app and args.app in ["clock", "weather"]:
         app_manager.switch_to(args.app)
     else:
         app_manager.switch_to("clock")
-    
+
     # Run loop
     print("Starting Pixie OS...")
     try:
         app_manager.run_loop(fps=30)
     except KeyboardInterrupt:
         pass
+
+
+def _run_with_reload(args):
+    """Run with file-watching auto-reload for development."""
+    import subprocess
+
+    print("🔄 Dev mode: watching src/ for changes...")
+
+    # Build the command to run without --dev (to avoid infinite recursion)
+    cmd = [sys.executable, '-u', __file__, '--emulator']
+    if args.app:
+        cmd.extend(['--app', args.app])
+
+    while True:
+        process = subprocess.Popen(cmd)
+        try:
+            # Wait for file changes
+            _wait_for_changes('src/')
+            print("\n🔄 File change detected, restarting...")
+            process.terminate()
+            process.wait(timeout=5)
+        except KeyboardInterrupt:
+            process.terminate()
+            process.wait(timeout=5)
+            print("\nDev mode stopped.")
+            break
+
+
+def _wait_for_changes(watch_dir):
+    """Block until a .py or .html file changes in watch_dir."""
+    try:
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+        import threading
+
+        changed = threading.Event()
+
+        class Handler(FileSystemEventHandler):
+            def on_modified(self, event):
+                if event.src_path.endswith(('.py', '.html', '.css', '.js')):
+                    changed.set()
+
+        observer = Observer()
+        observer.schedule(Handler(), watch_dir, recursive=True)
+        observer.start()
+        changed.wait()  # Block until a file changes
+        observer.stop()
+    except ImportError:
+        # Fallback: simple polling if watchdog isn't installed
+        import hashlib
+
+        def hash_dir(d):
+            h = hashlib.md5()
+            for root, _, files in os.walk(d):
+                for f in sorted(files):
+                    if f.endswith(('.py', '.html', '.css', '.js')):
+                        path = os.path.join(root, f)
+                        h.update(os.path.getmtime(path).__str__().encode())
+            return h.hexdigest()
+
+        snapshot = hash_dir(watch_dir)
+        while True:
+            time.sleep(1)
+            if hash_dir(watch_dir) != snapshot:
+                return
 
 
 if __name__ == "__main__":
