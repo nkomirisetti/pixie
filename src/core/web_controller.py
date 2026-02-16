@@ -32,6 +32,7 @@ class WebController:
         self.app.add_url_rule('/', 'remote', self.remote)
         self.app.add_url_rule('/api/status', 'get_status', self.get_status, methods=['GET'])
         self.app.add_url_rule('/api/switch', 'switch_app', self.switch_app, methods=['POST'])
+        self.app.add_url_rule('/api/brightness', 'brightness', self.brightness_api, methods=['GET', 'POST'])
 
         # Emulator routes (only in emulator mode)
         if self.emulator_display is not None:
@@ -78,7 +79,8 @@ class WebController:
     def get_status(self):
         return jsonify({
             "current_app": self.app_manager.active_app_name,
-            "available_apps": list(self.app_manager.apps.keys())
+            "available_apps": list(self.app_manager.apps.keys()),
+            "brightness": self.app_manager.display.brightness
         })
 
     def switch_app(self):
@@ -92,6 +94,16 @@ class WebController:
 
         self.app_manager.switch_to(app_name)
         return jsonify({"status": "ok", "current_app": app_name})
+
+    def brightness_api(self):
+        if request.method == 'GET':
+            return jsonify({"brightness": self.app_manager.display.brightness})
+        data = request.json
+        if not data or 'brightness' not in data:
+            return jsonify({"error": "Missing 'brightness' in payload"}), 400
+        value = int(data['brightness'])
+        self.app_manager.display.set_brightness(value)
+        return jsonify({"status": "ok", "brightness": self.app_manager.display.brightness})
 
     # --- Emulator routes ---
 
