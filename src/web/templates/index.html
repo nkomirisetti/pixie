@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixie Emulator</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        canvas {
+            border: 2px solid #333;
+            background-color: #000;
+            image-rendering: pixelated;
+            /* Crucial for pixel art look */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .status {
+            margin-top: 10px;
+            font-size: 0.8em;
+            color: #888;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Pixie Emulator ({{ width }}x{{ height }})</h1>
+    <canvas id="matrix" width="512" height="512"></canvas>
+    <div class="status" id="status">Connecting...</div>
+
+    <script>
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+        const matrixWidth = {{ width }};
+        const matrixHeight = {{ height }};
+        const pixelSize = canvas.width / matrixWidth;
+
+        function fetchMatrixData() {
+            fetch('/matrix_data')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').innerText = 'Connected - Updating';
+                    drawMatrix(data);
+                })
+                .catch(err => {
+                    console.error('Error fetching data:', err);
+                    document.getElementById('status').innerText = 'Disconnected';
+                });
+        }
+
+        function drawMatrix(data) {
+            // data is a list of lists (width x height) containing (r, g, b) tuples
+            for (let x = 0; x < matrixWidth; x++) {
+                for (let y = 0; y < matrixHeight; y++) {
+                    const [r, g, b] = data[x][y];
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                }
+            }
+        }
+
+        // Poll every 100ms (10 FPS)
+        setInterval(fetchMatrixData, 100);
+    </script>
+</body>
+
+</html>
