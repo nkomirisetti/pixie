@@ -37,6 +37,12 @@ def main():
     app_manager.register_app("clock", clock)
     app_manager.register_app("weather", weather)
     
+    # --- Web Controller Setup ---
+    from src.core.web_controller import WebController
+    # Use port 5002 for local emulator to avoid Mac Control Center conflict on 5000
+    controller_port = 5002 if args.emulator else 5000
+    controller = WebController(app_manager, port=controller_port)
+
     # Set default app
     if args.app and args.app in ["clock", "weather"]:
         app_manager.switch_to(args.app)
