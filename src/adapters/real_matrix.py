@@ -22,6 +22,7 @@ class RealMatrixAdapter(DisplayInterface):
         self.options.parallel = 1
         self.options.hardware_mapping = 'adafruit-hat'
         self.options.gpio_slowdown = 4 # Adjust as needed for generic panels
+        self.options.drop_privileges = False
 
         self.matrix = RGBMatrix(options=self.options)
         self.canvas = self.matrix.CreateFrameCanvas()

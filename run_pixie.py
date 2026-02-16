@@ -3,10 +3,10 @@ import time
 import sys
 import os
 
-# Add project root to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+print("DEBUG: STARTING PIXIE ROOT MAIN V2")
 
 from src.core.display_interface import DisplayInterface
+from src.core.matrix_buffer import MatrixBuffer
 
 def main():
     parser = argparse.ArgumentParser(description='Pixie Display Controller')
@@ -14,7 +14,7 @@ def main():
     parser.add_argument('--app', type=str, help='Initial app to start (clock, weather)')
     args = parser.parse_args()
 
-    display: DisplayInterface
+    # display: DisplayInterface
 
     if args.emulator:
         from src.adapters.web_matrix import WebMatrixAdapter
@@ -39,7 +39,7 @@ def main():
     
     # --- Web Controller Setup ---
     from src.core.web_controller import WebController
-    # Use port 5002 for local emulator to avoid Mac Control Center conflict on 5000
+    # Use port 5000 on Pi
     controller_port = 5002 if args.emulator else 5000
     controller = WebController(app_manager, port=controller_port)
 

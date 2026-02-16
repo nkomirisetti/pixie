@@ -13,7 +13,23 @@ class WebController:
     def __init__(self, app_manager, port=5000):
         self.app_manager = app_manager
         self.port = port
-        self.app = Flask(__name__, template_folder='../web/templates', static_folder='../web/static')
+        
+        # Calculate absolute paths
+        import os
+        # FORCE PI PATH to debug weird dynamic calc issues
+        template_dir = '/home/pi/pixie/src/web/templates'
+        static_dir = '/home/pi/pixie/src/web/static'
+        
+        print(f"DEBUG: WebController paths (HARDCODED): templates='{template_dir}', static='{static_dir}'")
+        
+        if os.path.exists(template_dir):
+            print(f"DEBUG: template_dir contents: {os.listdir(template_dir)}")
+            remote_path = os.path.join(template_dir, 'remote.html')
+            print(f"DEBUG: remote.html exists: {os.path.exists(remote_path)}")
+        else:
+            print(f"DEBUG: template_dir DOES NOT EXIST (wtf)")
+
+        self.app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
         
         # Define routes
         self.app.add_url_rule('/', 'remote', self.remote)
@@ -28,8 +44,10 @@ class WebController:
     def _run_server(self):
         try:
             # Run Flask server securely (disable debug to avoid thread issues)
-            self.app.run(host='0.0.0.0', port=self.port, debug=False, use_reloader=False)
-        except OSError as e:
+            self.app.run(host='0.0.0.0', port=self.port, debug=False, use_reloader=False, load_dotenv=False)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"Error starting Web Controller on port {self.port}: {e}")
             print("Try running with a different port if needed.")
 
