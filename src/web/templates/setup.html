@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pixie Setup</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #0a0a1a;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            padding-top: env(safe-area-inset-top, 20px);
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 0 24px;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            font-weight: 700;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        /* Status banner */
+        .status-banner {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .status-banner.success {
+            background: #0a2e1a;
+            border: 1px solid #0f6;
+            display: block;
+        }
+
+        .status-banner.error {
+            background: #2e0a0a;
+            border: 1px solid #f33;
+            display: block;
+        }
+
+        .status-banner.loading {
+            background: #1a1a2e;
+            border: 1px solid #66f;
+            display: block;
+        }
+
+        .status-banner h3 {
+            margin-bottom: 4px;
+        }
+
+        .status-banner p {
+            color: #aaa;
+            font-size: 0.85em;
+        }
+
+        .status-banner a {
+            color: #66f;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Section headers */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .section-header h2 {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #888;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: 1px solid #444;
+            color: #888;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            cursor: pointer;
+        }
+
+        /* Network list */
+        .network-list {
+            list-style: none;
+            margin-bottom: 24px;
+        }
+
+        .network-item {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .network-item:active {
+            background: #2a2a4e;
+        }
+
+        .network-item.selected {
+            background: #1a2a4e;
+            border: 1px solid #44f;
+        }
+
+        .network-info {
+            flex: 1;
+        }
+
+        .network-name {
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .network-meta {
+            font-size: 0.75em;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .signal-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 16px;
+            margin-left: 12px;
+        }
+
+        .signal-bar {
+            width: 4px;
+            border-radius: 1px;
+            background: #333;
+        }
+
+        .signal-bar.active {
+            background: #0f6;
+        }
+
+        /* Password input */
+        .password-section {
+            display: none;
+            margin-bottom: 24px;
+        }
+
+        .password-section.visible {
+            display: block;
+        }
+
+        .password-input {
+            width: 100%;
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 14px 16px;
+            color: #fff;
+            font-size: 1em;
+            outline: none;
+            margin-bottom: 12px;
+        }
+
+        .password-input:focus {
+            border-color: #44f;
+        }
+
+        .connect-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #4444ff, #6644ff);
+            border: none;
+            border-radius: 10px;
+            padding: 16px;
+            color: #fff;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .connect-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .connect-btn:active:not(:disabled) {
+            opacity: 0.8;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid transparent;
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #1a1a2e 25%, #2a2a4e 50%, #1a1a2e 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 10px;
+            height: 52px;
+            margin-bottom: 8px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* Divider */
+        .divider {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✨ PIXIE</h1>
+            <p>Connect your Pixie to WiFi</p>
+        </div>
+
+        <div class="status-banner" id="status-banner">
+            <h3 id="status-title"></h3>
+            <p id="status-message"></p>
+        </div>
+
+        <div class="section-header">
+            <h2>Available Networks</h2>
+            <button class="refresh-btn" onclick="scanNetworks()">↻ Scan</button>
+        </div>
+
+        <ul class="network-list" id="network-list">
+            <li class="skeleton"></li>
+            <li class="skeleton"></li>
+            <li class="skeleton"></li>
+        </ul>
+
+        <div class="password-section" id="password-section">
+            <input type="password" class="password-input" id="password" placeholder="Enter WiFi password"
+                autocomplete="off" autocorrect="off">
+            <button class="connect-btn" id="connect-btn" onclick="connectWifi()">
+                Connect
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let selectedSSID = null;
+        let selectedSecure = false;
+
+        async function scanNetworks() {
+            const list = document.getElementById('network-list');
+            list.innerHTML = '<li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>';
+
+            try {
+                const res = await fetch('/api/scan');
+                const data = await res.json();
+                renderNetworks(data.networks);
+            } catch (e) {
+                list.innerHTML = '<li class="network-item" style="color:#f66">Scan failed — tap refresh</li>';
+            }
+        }
+
+        function renderNetworks(networks) {
+            const list = document.getElementById('network-list');
+            if (!networks.length) {
+                list.innerHTML = '<li class="network-item" style="color:#888">No networks found — tap scan</li>';
+                return;
+            }
+
+            list.innerHTML = networks.map(n => `
+                <li class="network-item ${n.ssid === selectedSSID ? 'selected' : ''}"
+                    onclick="selectNetwork('${n.ssid.replace(/'/g, "\\'")}', ${n.secure})">
+                    <div class="network-info">
+                        <div class="network-name">${n.secure ? '🔒 ' : ''}${n.ssid}</div>
+                        <div class="network-meta">${n.signal}% signal</div>
+                    </div>
+                    ${renderSignalBars(n.signal)}
+                </li>
+            `).join('');
+        }
+
+        function renderSignalBars(signal) {
+            const bars = [20, 40, 60, 80];
+            return `<div class="signal-bars">
+                ${bars.map((threshold, i) =>
+                `<div class="signal-bar ${signal >= threshold ? 'active' : ''}"
+                          style="height: ${6 + i * 3}px"></div>`
+            ).join('')}
+            </div>`;
+        }
+
+        function selectNetwork(ssid, secure) {
+            selectedSSID = ssid;
+            selectedSecure = secure;
+
+            // Update selection visual
+            document.querySelectorAll('.network-item').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            // Show/hide password
+            const pwSection = document.getElementById('password-section');
+            const pwInput = document.getElementById('password');
+            const connectBtn = document.getElementById('connect-btn');
+
+            if (secure) {
+                pwSection.classList.add('visible');
+                pwInput.value = '';
+                pwInput.focus();
+                connectBtn.textContent = `Connect to "${ssid}"`;
+            } else {
+                pwSection.classList.add('visible');
+                pwInput.style.display = 'none';
+                connectBtn.textContent = `Connect to "${ssid}"`;
+            }
+        }
+
+        async function connectWifi() {
+            if (!selectedSSID) return;
+
+            const btn = document.getElementById('connect-btn');
+            const password = document.getElementById('password').value;
+            const banner = document.getElementById('status-banner');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Connecting...';
+
+            showBanner('loading', 'Connecting...', `Joining "${selectedSSID}"...`);
+
+            try {
+                const res = await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ssid: selectedSSID, password: password || undefined })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showBanner('success', '✅ Connected!',
+                        `Your Pixie is now on "${selectedSSID}".<br>` +
+                        `IP Address: <strong>${data.message}</strong><br><br>` +
+                        `<a href="http://${data.message}:5000/">Open Pixie Remote →</a>`
+                    );
+                    btn.innerHTML = '✓ Connected';
+                    document.getElementById('password-section').classList.remove('visible');
+                } else {
+                    showBanner('error', '❌ Failed', data.message);
+                    btn.disabled = false;
+                    btn.textContent = 'Try Again';
+                }
+            } catch (e) {
+                showBanner('error', '❌ Error', 'Could not reach Pixie. Please reconnect to the Pixie WiFi and try again.');
+                btn.disabled = false;
+                btn.textContent = 'Try Again';
+            }
+        }
+
+        function showBanner(type, title, message) {
+            const banner = document.getElementById('status-banner');
+            banner.className = `status-banner ${type}`;
+            document.getElementById('status-title').textContent = title;
+            document.getElementById('status-message').innerHTML = message;
+        }
+
+        // Auto-scan on load
+        scanNetworks();
+    </script>
+</body>
+
+</html>
